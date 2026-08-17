@@ -1,0 +1,82 @@
+---
+- name: Check for the Home Assistant system disk
+  become: true
+  ansible.builtin.stat:
+    path: "{{ home_assistant_image_path }}"
+  register: home_assistant_image
+
+- name: Seed the Home Assistant system disk
+  when: not home_assistant_image.stat.exists
+  block:
+    - name: Download the pinned Home Assistant OS image
+      become: true
+      ansible.builtin.get_url:
+        url: "{{ home_assistant_image_url }}"
+        dest: "{{ home_assistant_image_path }}.xz"
+        checksum: "{{ home_assistant_image_checksum }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Decompress the Home Assistant OS image
+      become: true
+      ansible.builtin.command:
+        argv:
+          - xz
+          - --decompress
+          - "{{ home_assistant_image_path }}.xz"
+        creates: "{{ home_assistant_image_path }}"
+
+    - name: Set safe permissions on the Home Assistant system disk
+      become: true
+      ansible.builtin.file:
+        path: "{{ home_assistant_image_path }}"
+        owner: qemu
+        group: qemu
+        mode: "0600"
+        setype: virt_image_t
+
+- name: Recheck the Home Assistant system disk
+  become: true
+  ansible.builtin.stat:
+    path: "{{ home_assistant_image_path }}"
+  register: home_assistant_image_ready
+
+
+- name: Define the Home Assistant virtual machine
+  become: true
+  community.libvirt.virt:
+    command: define
+    xml: "{{ lookup('ansible.builtin.template', 'domain.xml.j2') }}"
+    autostart: true
+    uri: qemu:///system
+  register: home_assistant_domain
+  when: home_assistant_image_ready.stat.exists
+- name: Start the Home Assistant virtual machine
+  become: true
+  community.libvirt.virt:
+    name: "{{ home_assistant_name }}"
+    state: running
+    autostart: true
+    uri: qemu:///system
+  when:
+    - home_assistant_image_ready.stat.exists
+    - not (ansible_check_mode and home_assistant_domain.changed)
+
+- name: Install HACS into Home Assistant Core container
+  become: true
+  ansible.builtin.command:
+    argv:
+      - virsh
+      - -c
+      - qemu:///system
+      - qemu-agent-command
+      - "{{ home_assistant_name }}"
+      - >-
+        {"execute":"guest-exec","arguments":{"path":"/usr/bin/docker","arg":["exec",
+        "homeassistant","bash","-c","test -d /config/custom_components/hacs ||
+        (wget -O - https://get.hacs.xyz | bash -)"]}}
+  when:
+    - home_assistant_image_ready.stat.exists
+    - not ansible_check_mode
+  changed_when: false

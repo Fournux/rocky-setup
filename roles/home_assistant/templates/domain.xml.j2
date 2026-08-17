@@ -1,0 +1,46 @@
+<domain type="kvm">
+  <name>{{ home_assistant_name }}</name>
+  <uuid>{{ home_assistant_uuid }}</uuid>
+  <description>Home Assistant OS</description>
+  <memory unit="MiB">{{ home_assistant_memory_mb }}</memory>
+  <currentMemory unit="MiB">{{ home_assistant_memory_mb }}</currentMemory>
+  <vcpu placement="static">{{ home_assistant_vcpus }}</vcpu>
+  <os>
+    <type arch="x86_64" machine="q35">hvm</type>
+    <loader readonly="yes" type="pflash">{{ home_assistant_ovmf_code }}</loader>
+    <nvram template="{{ home_assistant_ovmf_vars }}"/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode="host-passthrough" check="none"/>
+  <clock offset="utc"/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>restart</on_crash>
+  <pm>
+    <suspend-to-mem enabled="no"/>
+    <suspend-to-disk enabled="no"/>
+  </pm>
+  <devices>
+    <emulator>/usr/libexec/qemu-kvm</emulator>
+    <disk type="file" device="disk">
+      <driver name="qemu" type="qcow2" discard="unmap"/>
+      <source file="{{ home_assistant_image_path }}"/>
+      <target dev="vda" bus="virtio"/>
+      <boot order="1"/>
+    </disk>
+    <controller type="scsi" model="virtio-scsi"/>
+    <interface type="bridge">
+      <source bridge="{{ lan_bridge }}"/>
+      <mac address="{{ home_assistant_mac }}"/>
+      <model type="virtio"/>
+    </interface>
+    <console type="pty"/>
+    <channel type="unix">
+      <source mode="bind"/>
+      <target type="virtio" name="org.qemu.guest_agent.0"/>
+    </channel>
+  </devices>
+</domain>

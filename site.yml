@@ -1,0 +1,36 @@
+---
+- name: Rocky Linux home server setup
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  force_handlers: true
+
+  pre_tasks:
+    - name: Validate the target server
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == 'Rocky'
+          - ansible_facts.distribution_major_version == '10'
+          - ansible_facts.architecture == 'x86_64'
+          - ansible_facts.service_mgr == 'systemd'
+          - ansible_facts.user_uid | int != 0
+          - lan_interface in ansible_facts.interfaces
+          - >-
+            (ansible_facts.memtotal_mb | int) >=
+            (home_assistant_memory_mb | int) + 2048
+          - >-
+            (ansible_facts.processor_vcpus | int) >=
+            (home_assistant_vcpus | int)
+        fail_msg: >-
+          Run this playbook as a regular user on an x86-64 Rocky Linux 10
+          server with at least {{ home_assistant_memory_mb + 2048 }} MiB RAM,
+          {{ home_assistant_vcpus }} CPUs and the {{ lan_interface }}
+          interface.
+          Use Ansible privilege escalation; do not run ansible-playbook as root.
+      tags: always
+
+  roles:
+    - role: server
+      tags: [server, virtualization, network]
+    - role: home_assistant
+      tags: [home_assistant, virtualization]

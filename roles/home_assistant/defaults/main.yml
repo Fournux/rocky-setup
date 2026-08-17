@@ -1,0 +1,16 @@
+---
+home_assistant_name: home-assistant
+home_assistant_memory_mb: 4096
+home_assistant_vcpus: 2
+
+# HAOS release (not HA Core version).
+home_assistant_version: "18.2"
+
+home_assistant_release_base_url: >-
+  https://github.com/home-assistant/operating-system/releases/download
+home_assistant_image_url: >-
+  {{ home_assistant_release_base_url }}/{{ home_assistant_version
+  }}/haos_ova-{{ home_assistant_version }}.qcow2.xz
+home_assistant_image_path: /var/lib/libvirt/images/home-assistant.qcow2
+home_assistant_ovmf_code: /usr/share/edk2/ovmf/OVMF_CODE.fd
+home_assistant_ovmf_vars: /usr/share/edk2/ovmf/OVMF_VARS.fd

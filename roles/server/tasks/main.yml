@@ -1,0 +1,126 @@
+---
+- name: Set the server hostname
+  become: true
+  ansible.builtin.hostname:
+    name: "{{ server_hostname }}"
+
+- name: Install the virtualization stack and network tools
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - avahi
+      - cockpit
+      - cockpit-machines
+      - edk2-ovmf
+      - firewalld
+      - libvirt
+      - python3-libvirt
+      - python3-lxml
+      - qemu-kvm
+      - virt-install
+      - xz
+    state: present
+
+- name: Allow the invoking user to manage system virtual machines
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    groups: libvirt
+    append: true
+
+- name: Enable the host services
+  become: true
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - avahi-daemon.service
+    - cockpit.socket
+    - firewalld.service
+    - libvirtd.service
+
+- name: Allow Cockpit and mDNS through the firewall
+  become: true
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop:
+    - cockpit
+    - mdns
+
+- name: Check KVM availability
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: server_kvm_device
+
+- name: Require hardware virtualization
+  ansible.builtin.assert:
+    that: server_kvm_device.stat.exists
+    fail_msg: Enable AMD-V or Intel VT-x in the machine firmware, then reboot.
+
+- name: Configure the LAN bridge
+  become: true
+  community.general.nmcli:
+    conn_name: "{{ lan_bridge }}"
+    ifname: "{{ lan_bridge }}"
+    type: bridge
+    mac: "{{ ansible_facts[lan_interface].macaddress }}"
+    method4: auto
+    method6: auto
+    stp: false
+    zone: public
+    autoconnect: true
+    state: present
+
+- name: Attach the wired connection to the LAN bridge
+  become: true
+  community.general.nmcli:
+    conn_name: "{{ lan_connection }}"
+    ifname: "{{ lan_interface }}"
+    type: ethernet
+    slave_type: bridge
+    master: "{{ lan_bridge }}"
+    autoconnect: true
+    state: present
+  register: server_lan_port
+
+
+- name: Deploy the weekly reboot service unit
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/weekly-reboot.service
+    content: |
+      [Unit]
+      Description=Weekly scheduled reboot
+
+      [Service]
+      Type=oneshot
+      ExecStart=/sbin/shutdown -r now
+    mode: "0644"
+
+- name: Deploy the weekly reboot timer unit
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/weekly-reboot.timer
+    content: |
+      [Unit]
+      Description=Reboot every Monday at 03:00
+
+      [Timer]
+      OnCalendar=Mon *-*-* 03:00:00
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+    mode: "0644"
+
+- name: Enable the weekly reboot timer
+  become: true
+  ansible.builtin.systemd_service:
+    name: weekly-reboot.timer
+    enabled: true
+    state: started
+    daemon_reload: true

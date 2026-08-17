@@ -1,0 +1,6 @@
+---
+server_hostname: rocky-server
+
+lan_interface: enp3s0
+lan_connection: "{{ lan_interface }}"
+lan_bridge: br0

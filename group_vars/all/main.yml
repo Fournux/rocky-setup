@@ -1,0 +1,10 @@
+---
+# Site-specific overrides — defaults live in roles/*/defaults/main.yml
+
+# HAOS release pinned with its checksum.
+home_assistant_version: "18.2"
+home_assistant_image_checksum: >-
+  sha256:254e53f354df0739e3afc09be5431a07df53f0df6b703885404f665c454f254e
+
+home_assistant_uuid: 5c5601f6-19a3-4f2c-8839-f107280e71ba
+home_assistant_mac: "52:54:00:7b:13:27"
