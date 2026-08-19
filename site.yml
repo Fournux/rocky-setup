@@ -34,3 +34,5 @@
       tags: [server, virtualization, network]
     - role: home_assistant
       tags: [home_assistant, virtualization]
+    - role: wireguard
+      tags: [wireguard, vpn, network]

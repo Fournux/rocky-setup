@@ -1,5 +1,7 @@
 ---
 server_hostname: rocky-server
+server_tuned_profile: powersave
+
 
 lan_interface: enp3s0
 lan_connection: "{{ lan_interface }}"

@@ -1,0 +1,11 @@
+---
+- name: Allow Cockpit and mDNS through the firewall
+  become: true
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop:
+    - cockpit
+    - mdns

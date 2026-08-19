@@ -1,0 +1,26 @@
+---
+- name: Configure the LAN bridge
+  become: true
+  community.general.nmcli:
+    conn_name: "{{ lan_bridge }}"
+    ifname: "{{ lan_bridge }}"
+    type: bridge
+    mac: "{{ ansible_facts[lan_interface].macaddress }}"
+    method4: auto
+    method6: auto
+    stp: false
+    zone: public
+    autoconnect: true
+    state: present
+
+- name: Attach the wired connection to the LAN bridge
+  become: true
+  community.general.nmcli:
+    conn_name: "{{ lan_connection }}"
+    ifname: "{{ lan_interface }}"
+    type: ethernet
+    slave_type: bridge
+    master: "{{ lan_bridge }}"
+    autoconnect: true
+    state: present
+  register: server_lan_port

@@ -1,0 +1,10 @@
+---
+- name: Check KVM availability
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: server_kvm_device
+
+- name: Require hardware virtualization
+  ansible.builtin.assert:
+    that: server_kvm_device.stat.exists
+    fail_msg: Enable AMD-V or Intel VT-x in the machine firmware, then reboot.

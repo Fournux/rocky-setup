@@ -1,0 +1,65 @@
+---
+- name: Set the server hostname
+  become: true
+  ansible.builtin.hostname:
+    name: "{{ server_hostname }}"
+
+- name: Install the virtualization stack and network tools
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - avahi
+      - cockpit
+      - cockpit-machines
+      - edk2-ovmf
+      - firewalld
+      - libvirt
+      - python3-libvirt
+      - python3-lxml
+      - qemu-kvm
+      - tuned
+      - virt-install
+      - xz
+    state: present
+- name: Restrict Avahi mDNS to the LAN bridge interface
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/avahi/avahi-daemon.conf
+    regexp: '^#?allow-interfaces\s*='
+    line: "allow-interfaces={{ lan_bridge }}"
+    insertafter: '^\\[server\\]'
+    mode: "0644"
+  notify: Restart Avahi
+
+- name: Allow the invoking user to manage system virtual machines
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    groups: libvirt
+    append: true
+
+- name: Enable the host services
+  become: true
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - avahi-daemon.service
+    - cockpit.socket
+    - firewalld.service
+    - libvirtd.service
+    - tuned.service
+
+- name: Check active tuned profile
+  ansible.builtin.command:
+    cmd: tuned-adm active
+  register: server_tuned_active
+  changed_when: false
+
+- name: Set tuned power profile
+  become: true
+  ansible.builtin.command:
+    cmd: "tuned-adm profile {{ server_tuned_profile }}"
+  when: "server_tuned_profile not in server_tuned_active.stdout"
+  changed_when: true

@@ -1,0 +1,37 @@
+---
+- name: Deploy the weekly reboot service unit
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/weekly-reboot.service
+    content: |
+      [Unit]
+      Description=Weekly scheduled reboot
+
+      [Service]
+      Type=oneshot
+      ExecStart=/sbin/shutdown -r now
+    mode: "0644"
+
+- name: Deploy the weekly reboot timer unit
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/weekly-reboot.timer
+    content: |
+      [Unit]
+      Description=Reboot every Monday at 03:00
+
+      [Timer]
+      OnCalendar=Mon *-*-* 03:00:00
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+    mode: "0644"
+
+- name: Enable the weekly reboot timer
+  become: true
+  ansible.builtin.systemd_service:
+    name: weekly-reboot.timer
+    enabled: true
+    state: started
+    daemon_reload: true
