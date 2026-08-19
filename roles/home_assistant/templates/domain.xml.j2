@@ -42,5 +42,13 @@
       <source mode="bind"/>
       <target type="virtio" name="org.qemu.guest_agent.0"/>
     </channel>
+    {% for device in home_assistant_usb_devices | default([]) %}
+    <hostdev mode="subsystem" type="usb" managed="yes">
+      <source>
+        <vendor id="{{ device.vendor }}"/>
+        <product id="{{ device.product }}"/>
+      </source>
+    </hostdev>
+    {% endfor %}
   </devices>
 </domain>

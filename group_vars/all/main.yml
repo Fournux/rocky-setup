@@ -8,3 +8,7 @@ home_assistant_image_checksum: >-
 
 home_assistant_uuid: 5c5601f6-19a3-4f2c-8839-f107280e71ba
 home_assistant_mac: "52:54:00:7b:13:27"
+
+home_assistant_usb_devices:
+  - vendor: "0x0e8d"
+    product: "0x0608"
